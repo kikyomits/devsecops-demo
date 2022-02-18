@@ -1,0 +1,22 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: terraform
+spec:
+  triggerGroups:
+  - name: terraform
+    interceptors:
+    - name: "validate GitHub payload and filter on eventType"
+      ref:
+        name: "github"
+      params:
+      - name: "secretRef"
+        value:
+          secretName: github-interceptor-secret
+          secretKey: secretToken
+      - name: "eventTypes"
+        value: ["pull_request"]
+    triggerSelector:
+      labelSelector:
+        matchLabels:
+          type: terraform

@@ -1,0 +1,4 @@
+.idea
+*.kikyomits.yaml
+.terraform
+.terraform.lock.hcl

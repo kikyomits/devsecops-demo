@@ -1,0 +1,23 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: pr-infra-run-
+  namespace: app
+spec:
+  pipelineRef:
+    name: pr-infra
+  params:
+    - name: repo_url
+      value: https://github.com/kikyomits/devsecops-demo.git
+  workspaces:
+    - name: src
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 100Mi
+    - name: secrets
+      secret:
+        secretName: aws-credentials

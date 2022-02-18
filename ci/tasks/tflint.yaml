@@ -1,0 +1,77 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: tflint
+spec:
+  workspaces:
+    - name: src
+      description: ""
+    - name: secrets
+      mountPath: /tekton/home/.aws
+  params:
+    - name: trivySeverity
+      description: "severity for trivy"
+      default: "HIGH"
+    - name: terraformDir
+      description: terraform source code directory where lint tools run
+      default: .
+
+  steps:
+    - name: fmt
+      image: docker.io/mkikyotani/tf-tools:0.0.1
+      command:
+        - terraform
+      args:
+        - fmt
+        - --recursive
+        - -check
+        - .
+      workingDir: "/workspace/src/$(params.terraformDir)"
+      onError: continue
+
+    - name: validate
+      image: docker.io/mkikyotani/tf-tools:0.0.1
+      script: |
+        terraform init
+        terraform validate
+      workingDir: "/workspace/src/$(params.terraformDir)"
+      onError: continue
+
+    - name: tflint
+      image: "docker.io/mkikyotani/tf-tools:0.0.1"
+      command:
+        - tflint
+      args:
+        - --init
+        - .
+      workingDir: "/workspace/src/$(params.terraformDir)"
+      onError: continue
+
+    - name: trivy
+      image: docker.io/mkikyotani/tf-tools:0.0.1
+      command:
+        - trivy
+      args:
+        - config
+        - --exit-code
+        - "1"
+        - --severity
+        - "$(params.trivySeverity)"
+        - .
+      workingDir: "/workspace/src/$(params.terraformDir)"
+      onError: continue
+
+    - name: get-results
+      image: alpine:3.15.0
+      script: |
+        fmt=$(cat $(steps.step-fmt.exitCode.path))
+        validate=$(cat $(steps.step-validate.exitCode.path))
+        tflint=$(cat $(steps.step-tflint.exitCode.path))
+        trivy=$(cat $(steps.step-trivy.exitCode.path))
+
+        results="$fmt $validate $tflint $trivy"
+        if [[ "${results}" == *"1"* ]] ; then
+          echo "[ERROR] Found failure during terraform scan steps."
+          exit 1
+        fi
+

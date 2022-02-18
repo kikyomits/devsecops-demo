@@ -1,0 +1,35 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: tfapply
+spec:
+  workspaces:
+    - name: src
+      description: ""
+    - name: secrets
+      mountPath: /tekton/home/.aws
+  params:
+    - name: terraformDir
+      description: terraform source code directory where lint tools run
+      default: .
+    - name: tfvars
+      description: path to tfvars file
+      default: terraform.tfvars
+    - name: tfplan
+      description: path to tfplan file
+      default: ""
+  results:
+    - name: tfplanPath
+      description: "path to tfplan file"
+  steps:
+    - name: tfplan
+      image: docker.io/mkikyotani/tf-tools:0.0.1
+      script: |
+        terraform init
+        terraform apply -var-file $(params.tfvars) "$(params.tfplan)"
+      workingDir: "/workspace/src/$(params.terraformDir)"
+
+
+
+
+

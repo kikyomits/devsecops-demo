@@ -1,0 +1,66 @@
+---
+kind: "Pipeline"
+apiVersion: "tekton.dev/v1beta1"
+metadata:
+  creationTimestamp: "2022-02-21T00:18:59Z"
+  name: "pr-infra"
+  namespace: "app"
+  resourceVersion: "172367"
+  uid: "78db8cbf-5f67-4818-92dd-7f5f859f80c4"
+spec:
+  workspaces:
+    - name: "src"
+    - name: "secrets"
+  params:
+    - name: "repo_url"
+      type: "string"
+  tasks:
+    - name: "fetch-source"
+      params:
+        - name: "url"
+          value: "$(params.repo_url)"
+      taskRef:
+        kind: "Task"
+        name: "git-clone"
+      workspaces:
+        - name: "output"
+          workspace: "src"
+    - name: "lint"
+      params:
+        - name: "terraformDir"
+          value: "terraform"
+      runAfter:
+        - "fetch-source"
+      taskRef:
+        kind: "Task"
+        name: "tflint"
+      workspaces:
+        - name: "src"
+          workspace: "src"
+        - name: "secrets"
+          workspace: "secrets"
+    - name: "tfplan"
+      taskRef:
+        kind: Task
+        name: tfplan
+      workspaces:
+        - name: "src"
+          workspace: "src"
+        - name: "secrets"
+          workspace: "secrets"
+      runAfter:
+        - "lint"
+    - name: "tfapply"
+      taskRef:
+        kind: Task
+        name: tfapply
+      workspaces:
+        - name: "src"
+          workspace: "src"
+      params:
+        - name: "terraformDir"
+          value: "terraform"
+        - name: "tfplan"
+          value: "$(results.tfplan.tfplanPath)"
+      runAfter:
+        - tfplan
