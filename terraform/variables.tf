@@ -19,8 +19,11 @@ variable "acl" {
 }
 
 variable "tags" {
-  type        = map(any)
+  type        = map(string)
   description = "key-value tag data to attach to resources"
+  default = {
+    purpose = "demo"
+  }
 }
 
 variable "policy" {
