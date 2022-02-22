@@ -7,7 +7,7 @@ spec:
     - name: src
       description: ""
     - name: secrets
-      mountPath: /tekton/home/.aws
+      mountPath: /root/.aws
   params:
     - name: terraformDir
       description: terraform source code directory where lint tools run
@@ -15,6 +15,9 @@ spec:
     - name: tfvars
       description: path to tfvars file
       default: terraform.tfvars
+    - name: awsProfile
+      description: aws credential profile name
+      default: "default"
   results:
     - name: tfplanPath
       description: "path to tfplan file"
@@ -23,6 +26,7 @@ spec:
       image: docker.io/mkikyotani/tf-tools:0.0.1
       script: |
         tfplanPath="/workspace/src/$(params.terraformDir)/$(context.taskRun.uid).tfplan"
+        export AWS_PROFILE=$(params.awsProfile)
         terraform init
         terraform plan -var-file $(params.tfvars) -out "${tfplanPath}"
         echo $tfplanPath | tee $(results.tfplanPath.path)

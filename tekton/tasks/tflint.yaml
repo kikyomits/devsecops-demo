@@ -7,7 +7,7 @@ spec:
     - name: src
       description: ""
     - name: secrets
-      mountPath: /tekton/home/.aws
+      mountPath: /root/.aws
   params:
     - name: trivySeverity
       description: "severity for trivy"
