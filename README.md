@@ -12,4 +12,6 @@ kubectl apply --filename https://storage.googleapis.com/tekton-releases/dashboar
 kubectl apply --filename https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
 kubectl apply --filename https://storage.googleapis.com/tekton-releases/triggers/latest/interceptors.yaml
 
+# kaniko
+kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/main/task/kaniko/0.5/kaniko.yaml
 ```

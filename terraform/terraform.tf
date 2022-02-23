@@ -2,7 +2,7 @@ terraform {
   required_version = "= 1.1.6"
   backend "s3" {
     bucket = "kikyomits-terraform"
-    key = "tfstate"
+    key    = "tfstate"
     region = "ap-southeast-2"
   }
   required_providers {

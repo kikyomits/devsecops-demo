@@ -26,7 +26,7 @@ spec:
         - --recursive
         - -check
         - .
-      workingDir: "/workspace/src/$(params.terraformDir)"
+      workingDir: "$(workspaces.src.path)/$(params.terraformDir)"
       onError: continue
 
     - name: validate
@@ -34,7 +34,7 @@ spec:
       script: |
         terraform init
         terraform validate
-      workingDir: "/workspace/src/$(params.terraformDir)"
+      workingDir: "$(workspaces.src.path)/$(params.terraformDir)"
       onError: continue
 
     - name: tflint
@@ -44,7 +44,7 @@ spec:
       args:
         - --init
         - .
-      workingDir: "/workspace/src/$(params.terraformDir)"
+      workingDir: "$(workspaces.src.path)/$(params.terraformDir)"
       onError: continue
 
     - name: trivy
@@ -58,7 +58,7 @@ spec:
         - --severity
         - "$(params.trivySeverity)"
         - .
-      workingDir: "/workspace/src/$(params.terraformDir)"
+      workingDir: "$(workspaces.src.path)/$(params.terraformDir)"
       onError: continue
 
     - name: get-results
@@ -70,8 +70,11 @@ spec:
         trivy=$(cat $(steps.step-trivy.exitCode.path))
 
         results="$fmt $validate $tflint $trivy"
+
+        echo $results
         if [[ "${results}" == *"1"* ]] ; then
           echo "[ERROR] Found failure during terraform scan steps."
           exit 1
         fi
+        echo "Passed all terraform pre-checks"
 

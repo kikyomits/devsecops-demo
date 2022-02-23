@@ -25,12 +25,12 @@ spec:
     - name: tfplan
       image: docker.io/mkikyotani/tf-tools:0.0.1
       script: |
-        tfplanPath="/workspace/src/$(params.terraformDir)/$(context.taskRun.uid).tfplan"
+        tfplanPath="$(workspaces.src.path)/$(params.terraformDir)/$(context.taskRun.uid).tfplan"
         export AWS_PROFILE=$(params.awsProfile)
         terraform init
         terraform plan -var-file $(params.tfvars) -out "${tfplanPath}"
-        echo $tfplanPath | tee $(results.tfplanPath.path)
-      workingDir: "/workspace/src/$(params.terraformDir)"
+        echo -n $tfplanPath | tee $(results.tfplanPath.path)
+      workingDir: "$(workspaces.src.path)/$(params.terraformDir)"
 
 
 

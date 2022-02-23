@@ -12,9 +12,6 @@ spec:
     - name: terraformDir
       description: terraform source code directory where lint tools run
       default: .
-    - name: tfvars
-      description: path to tfvars file
-      default: terraform.tfvars
     - name: tfplan
       description: path to tfplan file
       default: ""
@@ -28,10 +25,12 @@ spec:
     - name: tfapply
       image: docker.io/mkikyotani/tf-tools:0.0.1
       script: |
-        export AWS_PROFILE=$(params.awsProfile)
         terraform init
-        terraform apply -auto-approve -var-file $(params.tfvars) "$(params.tfplan)"
-      workingDir: "/workspace/src/$(params.terraformDir)"
+        terraform apply -auto-approve "$(params.tfplan)"
+      env:
+        - name: AWS_PROFILE
+          value: "$(params.awsProfile)"
+      workingDir: "$(workspaces.src.path)/$(params.terraformDir)"
 
 
 

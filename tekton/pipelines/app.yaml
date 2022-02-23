@@ -2,12 +2,12 @@
 kind: "Pipeline"
 apiVersion: "tekton.dev/v1beta1"
 metadata:
-  creationTimestamp: "2022-02-22T06:17:06Z"
-  name: "pr-infra"
+  name: "app"
   namespace: "app"
-  resourceVersion: "371535"
-  uid: "5286d231-015a-4bd2-8a19-59ef05c5d197"
 spec:
+  workspaces:
+  - name: "src"
+  - name: dockerconfig
   params:
   - name: "repo_url"
     type: "string"
@@ -22,50 +22,19 @@ spec:
     workspaces:
     - name: "output"
       workspace: "src"
-  - name: "lint"
-    params:
-    - name: "terraformDir"
-      value: "terraform"
-    runAfter:
-    - "fetch-source"
+  - name: build-and-push
     taskRef:
-      kind: "Task"
-      name: "tflint"
+      kind: Task
+      name: kaniko
     workspaces:
-    - name: "src"
+    - name: "source"
       workspace: "src"
-    - name: "secrets"
-      workspace: "secrets"
-  - name: "tfplan"
+    - name: dockerconfig
+      workspace: dockerconfig
     params:
-    - name: "terraformDir"
-      value: "terraform"
+      - name: IMAGE
+        value: "docker.io/mkikyotani/devsecops-demo-app"
+      - name: CONTEXT
+        value: ./app
     runAfter:
-    - "lint"
-    taskRef:
-      kind: "Task"
-      name: "tfplan"
-    workspaces:
-    - name: "src"
-      workspace: "src"
-    - name: "secrets"
-      workspace: "secrets"
-  - name: "tfapply"
-    params:
-    - name: "terraformDir"
-      value: "terraform"
-    - name: "tfplan"
-      value: "$(tasks.tfplan.results.tfplanPath)"
-    runAfter:
-    - "tfplan"
-    taskRef:
-      kind: "Task"
-      name: "tfapply"
-    workspaces:
-    - name: "src"
-      workspace: "src"
-    - name: "secrets"
-      workspace: "secrets"
-  workspaces:
-  - name: "src"
-  - name: "secrets"
+      - fetch-source
