@@ -1,0 +1,31 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: scan-image
+spec:
+  params:
+    - name: image
+      type: string
+      description: image url with tag to be scanned
+    - name: severity
+      type: string
+      description: severity for trivy
+      default: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+    - name: output
+      type: string
+      description: trivy output
+      default: table
+  steps:
+    - name: scan
+      image: docker.io/aquasec/trivy:0.23.0
+      command:
+        - trivy
+      args:
+        - image
+        - --exit-code
+        - "1"
+        - --severity
+        - "$(params.severity)"
+        - --output
+        - "$(params.output)"
+        - "$(params.image)"

@@ -1,14 +1,20 @@
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
-  generateName: app-run-
+  generateName: app-build-run-
   namespace: app
 spec:
   pipelineRef:
-    name: app
+    name: app-build
   params:
-    - name: repo_url
+    - name: repoUrl
       value: https://github.com/kikyomits/devsecops-demo.git
+    - name: appName
+      value: devsecops-demo-app
+    - name: imageOrg
+      value: mkikyotani
+    - name: imageTag
+      value: 0.0.1
   workspaces:
     - name: src
       volumeClaimTemplate:
@@ -21,3 +27,6 @@ spec:
     - name: dockerconfig
       secret:
         secretName: docker-secret
+    - name: sonar-settings
+      configMap:
+        name: "sonar-properties"

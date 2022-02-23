@@ -1,0 +1,75 @@
+---
+kind: "Pipeline"
+apiVersion: "tekton.dev/v1beta1"
+metadata:
+  name: "app-build"
+  namespace: "app"
+spec:
+  workspaces:
+  - name: "src"
+  - name: dockerconfig
+  - name: sonar-settings
+  params:
+  - name: "repoUrl"
+    type: "string"
+  - name: appName
+    type: "string"
+  - name: imageOrg
+    type: string
+    default: mkikyotani
+  - name: imageTag
+    type: string
+    default: 0.0.1
+  tasks:
+  - name: "fetch-source"
+    taskRef:
+      kind: "Task"
+      name: "git-clone"
+    workspaces:
+    - name: "output"
+      workspace: "src"
+    params:
+    - name: "url"
+      value: "$(params.repoUrl)"
+  - name: code-analysis
+    taskRef:
+      name: sonarqube-scanner
+    runAfter:
+      - fetch-source
+    params:
+      - name: SONAR_HOST_URL
+        value: http://sonarqube-sonarqube.sonarqube.svc:9000
+      - name: SONAR_PROJECT_KEY
+        value: "$(params.appName)"
+    workspaces:
+      - name: source
+        workspace: src
+      - name: sonar-settings
+        workspace: sonar-settings
+  - name: build-and-push
+    taskRef:
+      kind: Task
+      name: kaniko
+    workspaces:
+    - name: "source"
+      workspace: "src"
+    - name: dockerconfig
+      workspace: dockerconfig
+    params:
+      - name: IMAGE
+        value: "$(params.imageOrg)/$(params.appName):$(params.imageTag)"
+      - name: CONTEXT
+        value: app
+      - name: DOCKERFILE
+        value: app/Dockerfile
+    runAfter:
+      - code-analysis
+  - name: scan-image
+    taskRef:
+      kind: Task
+      name: scan-image
+    params:
+      - name: image
+        value: "$(params.imageOrg)/$(params.appName):$(params.imageTag)"
+    runAfter:
+      - build-and-push
