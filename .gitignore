@@ -1,4 +1,12 @@
+.DS_Store
 .idea
 *.kikyomits.yaml
 .terraform
 .terraform.lock.hcl
+
+.scannerwork
+devsecops-demo
+coverage.out
+report.json
+lint.xml
+vet,txt

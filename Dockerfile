@@ -1,7 +1,7 @@
 FROM golang:alpine3.15
 
 WORKDIR /go/src/github.com/kikyomits/devsecops-demo/
-COPY . ./
+COPY app ./
 RUN \
   go get && \
   CGO_ENABLED=0 GOOS=linux go build -o app .
