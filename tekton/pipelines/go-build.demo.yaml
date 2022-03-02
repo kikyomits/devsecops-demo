@@ -53,7 +53,7 @@ spec:
     workspaces:
       - name: source
         workspace: src
-  - name: golint
+  - name: golangci-lint
     taskRef:
       name: golangci-lint
     workspaces:
@@ -66,7 +66,7 @@ spec:
         value: --verbose
     runAfter:
       - fetch-source
-  - name: govet
+  - name: go-vet
     taskSpec:
       steps:
         - name: vet
@@ -91,8 +91,8 @@ spec:
         name: src
     runAfter:
       - unit-test
-      - golint
-      - govet
+      - golangci-lint
+      - go-vet
     taskSpec:
       workspaces:
         - name: src
@@ -100,10 +100,15 @@ spec:
         - name: scan
           image: docker.io/sonarsource/sonar-scanner-cli:4.5
           workingDir: $(workspaces.src.path)
+          env:
+            - name: SONAR_LOGIN
+              valueFrom:
+                secretKeyRef:
+                  name: sonar-properties
+                  key: 'sonar.login'
           script: |
             sonar-scanner \
               -Dsonar.host.url=http://sonarqube-sonarqube.sonarqube.svc:9000 \
-              -Dsonar.login=ac3a20962cd27a5ab69a1856bebce11dc9df68fb \
               -Dsonar.projectKey=devsecops-demo \
               -Dsonar.sources=. \
               -Dsonar.qualitygate.wait=true

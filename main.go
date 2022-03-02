@@ -9,14 +9,13 @@ import (
 //    Vet  int `json:results_returned`
 //}
 
-func unused(){
-  fmt.Println("unused function")
-}
+//func unused(){
+//  fmt.Println("unused function")
+//}
 
 func hello(w http.ResponseWriter, r *http.Request) {
     fmt.Fprintf(w, "Hello!")
     fmt.Println("access to hello")
-    return
 }
 
 func buildServer() (server http.Server){
