@@ -2,74 +2,84 @@
 kind: "Pipeline"
 apiVersion: "tekton.dev/v1beta1"
 metadata:
+  creationTimestamp: "2022-02-23T04:05:06Z"
   name: "app-build"
   namespace: "app"
+  resourceVersion: "1241824"
+  uid: "6f2fe734-3551-4c26-a171-3595f2aae33b"
 spec:
-  workspaces:
-  - name: "src"
-  - name: dockerconfig
-  - name: sonar-settings
   params:
   - name: "repoUrl"
     type: "string"
-  - name: appName
+  - name: "appName"
     type: "string"
-  - name: imageOrg
-    type: string
-    default: mkikyotani
-  - name: imageTag
-    type: string
-    default: 0.0.1
+  - default: "mkikyotani"
+    name: "imageOrg"
+    type: "string"
+  - default: "0.0.1"
+    name: "imageTag"
+    type: "string"
+  - default: "."
+    name: "srcPath"
+    type: "string"
+  - default: "Dockerfile"
+    name: "dockerfilePath"
+    type: "string"
   tasks:
   - name: "fetch-source"
+    params:
+    - name: "url"
+      value: "$(params.repoUrl)"
     taskRef:
       kind: "Task"
       name: "git-clone"
     workspaces:
     - name: "output"
       workspace: "src"
+  - name: "code-analysis"
     params:
-    - name: "url"
-      value: "$(params.repoUrl)"
-  - name: code-analysis
-    taskRef:
-      name: sonarqube-scanner
+    - name: "SONAR_HOST_URL"
+      value: "http://sonarqube-sonarqube.sonarqube.svc:9000"
+    - name: "SONAR_PROJECT_KEY"
+      value: "$(params.appName)"
     runAfter:
-      - fetch-source
-    params:
-      - name: SONAR_HOST_URL
-        value: http://sonarqube-sonarqube.sonarqube.svc:9000
-      - name: SONAR_PROJECT_KEY
-        value: "$(params.appName)"
-    workspaces:
-      - name: source
-        workspace: src
-      - name: sonar-settings
-        workspace: sonar-settings
-  - name: build-and-push
+    - "fetch-source"
     taskRef:
-      kind: Task
-      name: kaniko
+      kind: "Task"
+      name: "sonarqube-scanner"
     workspaces:
     - name: "source"
       workspace: "src"
-    - name: dockerconfig
-      workspace: dockerconfig
+    - name: "sonar-settings"
+      workspace: "sonar-settings"
+  - name: "build-and-push"
     params:
-      - name: IMAGE
-        value: "$(params.imageOrg)/$(params.appName):$(params.imageTag)"
-      - name: CONTEXT
-        value: app
-      - name: DOCKERFILE
-        value: app/Dockerfile
+    - name: "IMAGE"
+      value: "$(params.imageOrg)/$(params.appName):$(params.imageTag)"
+    - name: "CONTEXT"
+      value: "$(params.srcPath)"
+    - name: "DOCKERFILE"
+      value: "$(params.dockerfilePath)"
     runAfter:
-      - code-analysis
-  - name: scan-image
+    - "fetch-source"
     taskRef:
-      kind: Task
-      name: scan-image
+      kind: "Task"
+      name: "kaniko"
+    workspaces:
+    - name: "source"
+      workspace: "src"
+    - name: "dockerconfig"
+      workspace: "dockerconfig"
+  - name: "scan-image"
     params:
-      - name: image
-        value: "$(params.imageOrg)/$(params.appName):$(params.imageTag)"
+    - name: "image"
+      value: "$(params.imageOrg)/$(params.appName):$(params.imageTag)"
     runAfter:
-      - build-and-push
+    - "build-and-push"
+    taskRef:
+      kind: "Task"
+      name: "scan-image"
+  workspaces:
+  - name: "src"
+  - name: "dockerconfig"
+  - name: "sonar-settings"

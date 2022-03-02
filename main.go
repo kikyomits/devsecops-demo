@@ -5,9 +5,9 @@ import (
     "net/http"
 )
 
-type VetTest struct {
-    Vet  int `json:results_returned`
-}
+//type VetTest struct {
+//    Vet  int `json:results_returned`
+//}
 
 func unused(){
   fmt.Println("unused function")
@@ -21,7 +21,7 @@ func hello(w http.ResponseWriter, r *http.Request) {
 
 func buildServer() (server http.Server){
     http.HandleFunc("/", hello)
-    server = http.Server{Addr: ":8081", Handler: nil}
+    server = http.Server{Addr: ":8080", Handler: nil}
     return
 }
 

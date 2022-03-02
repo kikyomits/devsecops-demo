@@ -1,11 +1,11 @@
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
-  generateName: app-build-run-
+  generateName: go-build-run-
   namespace: app
 spec:
   pipelineRef:
-    name: app-build
+    name: go-build-demo
   params:
     - name: repoUrl
       value: https://github.com/kikyomits/devsecops-demo.git
@@ -17,13 +17,8 @@ spec:
       value: 0.0.1
   workspaces:
     - name: src
-      volumeClaimTemplate:
-        spec:
-          accessModes:
-            - ReadWriteOnce
-          resources:
-            requests:
-              storage: 100Mi
+      persistentVolumeClaim:
+        claimName: pvc-tekton
     - name: dockerconfig
       secret:
         secretName: docker-secret

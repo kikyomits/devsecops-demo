@@ -2,31 +2,34 @@
 kind: "Pipeline"
 apiVersion: "tekton.dev/v1beta1"
 metadata:
+  creationTimestamp: "2022-02-23T04:08:13Z"
   name: "app-deploy"
   namespace: "app"
+  resourceVersion: "506860"
+  uid: "1824b077-1c77-464a-bff2-35efba5bd16d"
 spec:
-  workspaces:
-  - name: "src"
-  - name: dockerconfig
   params:
   - name: "repoUrl"
     type: "string"
-  - name: appName
+  - name: "appName"
     type: "string"
-  - name: imageOrg
-    type: string
-    default: mkikyotani
-  - name: imageTag
-    type: string
-    default: 0.0.1
+  - default: "mkikyotani"
+    name: "imageOrg"
+    type: "string"
+  - default: "0.0.1"
+    name: "imageTag"
+    type: "string"
   tasks:
   - name: "fetch-source"
+    params:
+    - name: "url"
+      value: "$(params.repoUrl)"
     taskRef:
       kind: "Task"
       name: "git-clone"
     workspaces:
     - name: "output"
       workspace: "src"
-    params:
-    - name: "url"
-      value: "$(params.repoUrl)"
+  workspaces:
+  - name: "src"
+  - name: "dockerconfig"

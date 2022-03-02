@@ -1,0 +1,183 @@
+# This file intended to have all the tasks in a single file without using TaskRef to demonstrate shell commands for audience's better understandings
+# We should use TaskRef in production to reduce code duplications.
+---
+kind: "Pipeline"
+apiVersion: "tekton.dev/v1beta1"
+metadata:
+  name: "go-build-demo"
+  namespace: "app"
+spec:
+  workspaces:
+  - name: "src"
+  - name: dockerconfig
+  - name: sonar-settings
+  params:
+  - name: "repoUrl"
+    type: "string"
+  - name: appName
+    type: "string"
+  - name: imageOrg
+    type: string
+    default: mkikyotani
+  - name: imageTag
+    type: string
+    default: 0.0.1
+  - name: srcPath
+    type: string
+    default: .
+  - name: dockerfilePath
+    type: string
+    default: Dockerfile
+  tasks:
+  - name: "fetch-source"
+    taskRef:
+      name: "git-clone"
+    workspaces:
+    - name: "output"
+      workspace: "src"
+    params:
+    - name: "url"
+      value: "$(params.repoUrl)"
+  - name: unit-test
+    taskRef:
+      name: golang-test
+    params:
+      - name: package
+        value: github.com/kikyomits/$(params.appName)
+      - name: packages
+        value: .
+      - name: flags
+        value: "-coverprofile=coverage.out -v"
+    runAfter:
+      - fetch-source
+    workspaces:
+      - name: source
+        workspace: src
+  - name: golint
+    taskRef:
+      name: golangci-lint
+    workspaces:
+      - name: source
+        workspace: src
+    params:
+      - name: package
+        value: github.com/kikyomits/$(params.appName)
+      - name: flags
+        value: --verbose
+    runAfter:
+      - fetch-source
+  - name: govet
+    taskSpec:
+      steps:
+        - name: vet
+          image: golang:1.17.6
+          workingDir: "$(workspaces.source.path)/$(params.srcPath)"
+          script: |
+            go vet
+      params:
+        - name: srcPath
+          default: .
+      workspaces:
+        - name: source
+    runAfter:
+      - fetch-source
+    workspaces:
+      - name: source
+        workspace: src
+
+  - name: sonar-scan
+    workspaces:
+      - workspace: src
+        name: src
+    runAfter:
+      - unit-test
+      - golint
+      - govet
+    taskSpec:
+      workspaces:
+        - name: src
+      steps:
+        - name: scan
+          image: docker.io/sonarsource/sonar-scanner-cli:4.5
+          workingDir: $(workspaces.src.path)
+          script: |
+            sonar-scanner \
+              -Dsonar.host.url=http://sonarqube-sonarqube.sonarqube.svc:9000 \
+              -Dsonar.login=ac3a20962cd27a5ab69a1856bebce11dc9df68fb \
+              -Dsonar.projectKey=devsecops-demo \
+              -Dsonar.sources=. \
+              -Dsonar.qualitygate.wait=true
+              -Dsonar.test.inclusions='**/*_test.go' \
+              -Dsonar.go.coverage.reportPaths=coverage.out
+  - name: build-image
+    taskRef:
+      name: kaniko
+    workspaces:
+    - name: "source"
+      workspace: "src"
+    - name: dockerconfig
+      workspace: dockerconfig
+    params:
+      - name: IMAGE
+        value: "$(params.imageOrg)/$(params.appName):$(params.imageTag)"
+      - name: CONTEXT
+        value: "$(params.srcPath)"
+      - name: DOCKERFILE
+        value: "$(params.dockerfilePath)"
+      - name: EXTRA_ARGS
+        value:
+          - --no-push
+          - --tarPath=$(params.appName).tar
+    runAfter:
+      - sonar-scan
+  - name: scan-image
+    params:
+      - name: image
+        value: $(params.appName).tar
+    taskSpec:
+      params:
+        - name: image
+          type: string
+          description: image tar file location
+        - name: severity
+          type: string
+          description: severity for trivy
+          default: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+        - name: extraArgs
+          type: array
+          default: []
+      steps:
+      - name: scan
+        image: docker.io/aquasec/trivy:0.23.0
+        command:
+          - trivy
+        args:
+          - image
+          - $(params.extraArgs[*])
+          - --exit-code="1"
+          - --severity="$(params.severity)"
+          -  --input="$(params.image)"
+    runAfter:
+      - build-image
+  - name: push-image
+    params:
+      - name: image
+        value: $(params.appName).tar
+      - name: destination
+        value: "$(params.imageOrg)/$(params.appName):$(params.imageTag)"
+    runAfter:
+      - scan-image
+    taskSpec:
+      params:
+        - name: image
+        - name: destination
+      steps:
+        - name: push
+          image: gcr.io/go-containerregistry/crane:bfe2ffc6b6bda6cb55544e52025645f89486f815 # version was not available
+          command:
+            - crane
+          args:
+            - push
+            - "$(params.image)"
+            - "$(params.destination)"
+
